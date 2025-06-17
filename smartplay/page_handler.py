@@ -62,3 +62,12 @@ def click_night_section(page: Page):
         print("✅ Successfully clicked on 夜間 section.")
     else:
         print("❌ 夜間 section not found.")
+def click_afternoon_section(page: Page):
+    print("🌙 Clicking on 夜間 section...")
+    night_section = page.query_selector('div.sp-tabs-scroll [tabindex]:nth-of-type(1)')
+    if night_section:
+        night_section.click()
+        page.wait_for_load_state('networkidle')
+        print("✅ Successfully clicked on 夜間 section.")
+    else:
+        print("❌ 夜間 section not found.")
