@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright, expect
-from smartplay.page_handler import is_unlogin_page, is_loggedin_home_page, is_queue_page, try_auto_login, wait_for_queue_to_pass
+from smartplay.page_handler import PageStateHandler
 from smartplay.config import Config
 from smartplay.url_composer import SmartPlayURLComposer
 from dotenv import load_dotenv
@@ -19,7 +19,7 @@ composer.set_start_date("2025-06-23")
 
 def main():
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False, slow_mo=200)
+        browser = p.firefox.launch(headless=False, slow_mo=150)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
             bypass_csp=True,
@@ -27,25 +27,26 @@ def main():
         )
 
         page = context.new_page()
+        handler = PageStateHandler(page)
 
         # 登入流程 + 排隊流程整理成 while loop，直到成功進入主頁為止
         while True:
             page.goto(URL)
             page.wait_for_load_state('domcontentloaded')
 
-            if is_unlogin_page(page):
+            if handler.is_unlogin_page():
                 page.screenshot(path="temp/login.png", full_page=True)
-                try_auto_login(page)
+                handler.try_auto_login()
                 time.sleep(random.uniform(1, 2))  # human-like delay
                 continue  # retry 檢查頁面狀態
 
-            if is_queue_page(page):
+            if handler.is_queue_page():
                 page.screenshot(path="temp/queue.png", full_page=True)
-                wait_for_queue_to_pass(page)
+                handler.wait_for_queue_to_pass()
                 time.sleep(random.uniform(1, 2))  # human-like delay
                 continue  # retry 檢查頁面狀態
 
-            if is_loggedin_home_page(page):
+            if handler.is_loggedin_home_page():
                 page.screenshot(path="temp/home.png", full_page=True)
                 print("🎉 Successfully entered home page!")
                 break
@@ -61,6 +62,16 @@ def main():
         page.screenshot(path="temp/booking_page.png", full_page=True)
 
         # 這裡可以加上場地篩選邏輯
+        have_preferred_time = False
+        if not Config.PREFER_NIGHT:
+            handler.click_afternoon_section()
+        else:
+            handler.click_night_section()
+        
+        page.screenshot(path="temp/booking_page_2.png", full_page=True)
+        
+        handler.has_two_consecutive_enabled_slots()
+        
         page.pause()
 
 if __name__ == '__main__':
