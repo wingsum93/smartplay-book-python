@@ -14,7 +14,7 @@ class PageStateHandler:
         self.password = os.getenv("PASSWORD")
 
     def is_unlogin_page(self) -> bool:
-        return self.page.query_selector(Selector.UN_LOGIN_TITLE) is not None
+        return self.page.get_by_text("登入", exact=True).is_visible()
 
     def is_loggedin_home_page(self) -> bool:
         return self.page.query_selector(Selector.LOGIN_HOME_PAGE) is not None
@@ -26,6 +26,8 @@ class PageStateHandler:
         print("🔒 Unlogin page detected. Attempting to login...")
         attempts = 0
         while attempts < max_retries:
+            if not self.is_unlogin_page():
+                return
             self.page.fill('input[name="pc-login-username"]', self.username)
             self.page.fill('input[name="pc-login-password"]', self.password)
             self.page.click('div[name="pc-login-btn"] div[role="button"]')
@@ -44,15 +46,21 @@ class PageStateHandler:
         else:
             print("❌ Failed to login after multiple attempts.")
 
-    def wait_for_queue_to_pass(self, timeout: int = 1200) -> bool:
+    def wait_for_queue_to_pass(self):
         print("⏳ In queue... checking periodically if passed.")
-        for _ in range(timeout):
+        while True:
             time.sleep(1)
+            ## check how much people in queue
+            queue_element = self.page.query_selector(Selector.QUEUE_NUMBER)
+            queue_element_text = queue_element.inner_text().strip() if queue_element else "0"
+            try:
+                queue_number = int(queue_element_text)
+            except ValueError:
+                queue_number = 0
+            print(f"🔢 Current queue number: {queue_number}")
             if self.is_loggedin_home_page():
                 print("✅ Queue passed, now on home page.")
-                return True
-        print("❌ Still in queue after timeout.")
-        return False
+                return
 
     def click_night_section(self):
         print("🌙 Clicking on 夜間 section...")
