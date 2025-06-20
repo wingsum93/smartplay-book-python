@@ -4,15 +4,22 @@ import time
 from smartplay.config import Config
 from smartplay.selector import Selector
 from dotenv import load_dotenv
-
-load_dotenv()
+from pathlib import Path
 
 class PageStateHandler:
     def __init__(self, page: Page):
+        self._load_env()  # Load environment variables from .env file
         self.page = page
         self.username = os.getenv("USERNAME")
         self.password = os.getenv("PASSWORD")
 
+        if not self.username or not self.password:
+            raise RuntimeError("⚠️ USERNAME or PASSWORD not found in .env")
+        
+    def _load_env(self):
+        dotenv_path = Path(__file__).parent.parent / ".env"
+        load_dotenv(dotenv_path=dotenv_path, override=True)
+        
     def is_unlogin_page(self) -> bool:
         return self.page.get_by_text("登入", exact=True).is_visible()
 

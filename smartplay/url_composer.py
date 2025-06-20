@@ -1,5 +1,6 @@
 from urllib.parse import urlencode, quote
 from typing import List
+from datetime import date
 
 class SmartPlayURLComposer:
     BASE_URL = "https://www.smartplay.lcsd.gov.hk/facilities/search-result"
@@ -30,7 +31,40 @@ class SmartPlayURLComposer:
         encoded = urlencode({k: v for k, v in self.params.items()}, quote_via=quote)
         return f"{self.BASE_URL}?{encoded}"
 
+class VenuePageUrlBuilder:
+    BASE_URL = "https://www.smartplay.lcsd.gov.hk/facilities/select/court"
 
+    def __init__(self, venue_id: str, fat_id: str, venue_name: str, play_date: date):
+        self.venue_id = venue_id
+        self.fat_id = fat_id
+        self.venue_name = venue_name
+        self.play_date = play_date
+
+        # Static parameters
+        self.date_index = 0
+        self.district = "CW,EN"
+        self.type_code = "BADC"
+        self.sport_code = "BAGM"
+        self.frm_filter_type = ""
+        self.is_free = "false"
+
+    def build_url(self) -> str:
+        query_params = {
+            "venueId": self.venue_id,
+            "fatId": self.fat_id,
+            "venueName": self.venue_name,
+            "dateIndex": str(self.date_index),
+            "playDate": self.play_date.strftime("%Y-%m-%d"),
+            "district": self.district,
+            "typeCode": self.type_code,
+            "sportCode": self.sport_code,
+            "frmFilterType": self.frm_filter_type,
+            "isFree": self.is_free
+        }
+
+        encoded_params = urlencode(query_params, quote_via=quote)
+        return f"{self.BASE_URL}?{encoded_params}"
+    
 # 範例使用
 if __name__ == "__main__":
     from smartplay.config import Config

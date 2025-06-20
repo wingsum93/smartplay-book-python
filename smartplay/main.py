@@ -1,23 +1,18 @@
 from playwright.sync_api import sync_playwright, expect
 from smartplay.page_handler import PageStateHandler
 from smartplay.config import Config
-from smartplay.url_composer import SmartPlayURLComposer
+from smartplay.url_composer import SmartPlayURLComposer, VenuePageUrlBuilder
 from dotenv import load_dotenv
 
-import os
 import json
 import time
 from datetime import datetime, timedelta
 import random
 
-# Load environment variables
-load_dotenv()
-
 URL = 'https://www.smartplay.lcsd.gov.hk/home?lang=tc'
 
 composer = SmartPlayURLComposer(Config.LOCATION_CODES)
-composer.set_start_date("2025-06-23")
-
+composer.set_start_date(Config.START_DATE)
 
 def wait_until_7am():
     now = datetime.now()
@@ -27,8 +22,8 @@ def wait_until_7am():
     if now >= target:
         return
 
-    # 只係 6:55am ~ 7:00am 才等
-    if now.hour == 6 and now.minute >= 55:
+    # 只係 6:45am ~ 7:00am 才等
+    if now.hour == 6 and now.minute >= 45:
         print(f"⏳ Waiting until 7:00:00 AM... current time: {now.strftime('%H:%M:%S')}")
         while datetime.now() < target:
             time.sleep(0.2)  # sleep 200ms
