@@ -1,6 +1,6 @@
 import csv
 import time
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from urllib.parse import urlencode, quote
 from playwright.sync_api import sync_playwright
 from smartplay.page_handler import PageStateHandler
@@ -56,7 +56,9 @@ def main():
 
         # 載入場館資料並組成網址
         venue_settings = load_venue_settings(AREA_CSV_PATH)
-        target_date = date.today() + timedelta(days=6)
+        now = datetime.now()
+        target_date = date.today() + timedelta(days=5 if now.hour < 7 else 6)
+
 
 
         for venue in venue_settings:
@@ -69,6 +71,8 @@ def main():
             arena_url = builder.build_url()
             print(f"➡️ Visiting arena: {arena_url}")
             page.goto(arena_url)
+            page.wait_for_load_state('domcontentloaded')
+            page.click(Selector.the_day_selection)  
             page.wait_for_selector(Selector.sport_section, timeout=10000)  # 等待主元素出現
             page.screenshot(path=f"temp/arena_{venue['venueName']}.png", full_page=True)
             
@@ -96,7 +100,10 @@ def main():
                     # click 下一頁
                     next_button = page.get_by_role("button", name="繼續")  # 換成實際按鈕 selector
                     if next_button:
-                        next_button.click()
+                        try:
+                            next_button.click()
+                        except Exception as e:
+                            print(f"Timeout while clicking '繼續' button: {e}")
                     else:
                         print("無找到『繼續』按鈕")
                     found = True
