@@ -42,6 +42,7 @@ class VenuePageUrlBuilder:
 
         # Static parameters
         self.date_index = 0
+        self.sessionIndex = 1
         self.fat_id = 504
         self.type_code = "BADC"
         self.sport_code = "BAGM"
@@ -53,6 +54,7 @@ class VenuePageUrlBuilder:
             "venueId": self.venue_id,
             "fatId": self.fat_id,
             "venueName": self.venue_name,
+            "sessionIndex": str(self.sessionIndex),
             "dateIndex": str(self.date_index),
             "playDate": self.play_date.strftime("%Y-%m-%d"),
             "district": self.district,
