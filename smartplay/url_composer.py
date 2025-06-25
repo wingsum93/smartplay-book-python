@@ -34,15 +34,15 @@ class SmartPlayURLComposer:
 class VenuePageUrlBuilder:
     BASE_URL = "https://www.smartplay.lcsd.gov.hk/facilities/select/court"
 
-    def __init__(self, venue_id: str, fat_id: str, venue_name: str, play_date: date):
+    def __init__(self, venue_id: str, venue_name: str,district:str, play_date: date):
         self.venue_id = venue_id
-        self.fat_id = fat_id
         self.venue_name = venue_name
+        self.district = district
         self.play_date = play_date
 
         # Static parameters
         self.date_index = 0
-        self.district = "CW,EN"
+        self.fat_id = 504
         self.type_code = "BADC"
         self.sport_code = "BAGM"
         self.frm_filter_type = ""

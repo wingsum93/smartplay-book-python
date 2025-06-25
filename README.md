@@ -18,7 +18,10 @@ Run command:
 ```sh
 python -m smartplay.main
 ```
-
-
+## V2 approach by ding
+copy `area_setting.csv.template` to `area_setting.csv`
+```sh
+python -m smartplay.v2
+```
 # Limitation
 still work in progress, developed in mac platform

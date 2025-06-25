@@ -3,8 +3,12 @@ from smartplay.selector import Selector
 import time
 
 def run():
-    
-    TEMP_URL = 'https://www.smartplay.lcsd.gov.hk/facilities/select/court?venueId=224&fatId=504&venueName=%E7%B4%85%E7%A3%A1%E5%B8%82%E6%94%BF%E5%A4%A7%E5%BB%88%E9%AB%94%E8%82%B2%E9%A4%A8&sessionIndex=0&dateIndex=0&playDate=2025-06-26&district=KC&typeCode=BADC&sportCode=BAGM&frmFilterType=&isFree=false'
+    playDate= "2025-06-30"  # 👈 你想要的日期
+    venueName= "紅磡市政大廈體育館"
+    venueId= "224"  # 👈 你想要的場地 ID
+    district= "KC"  # 👈 你想要的地區代碼
+    fatId= 504
+    TEMP_URL = f'https://www.smartplay.lcsd.gov.hk/facilities/select/court?venueId={venueId}&fatId={fatId}&venueName={venueName}&sessionIndex=0&dateIndex=0&playDate={playDate}&district={district}&typeCode=BADC&sportCode=BAGM&frmFilterType=&isFree=false'
     
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False, slow_mo=150)  # 開啟實體視窗方便 debug
@@ -14,6 +18,7 @@ def run():
             java_script_enabled=True
         )
         page = context.new_page()
+        print(f"🔗 Opening URL: {TEMP_URL}")
         page.goto(TEMP_URL,wait_until="domcontentloaded")  # 👈 你嘅目標網址
         page.wait_for_timeout(9000)
         # 1. 選取全部 16 個主元素
@@ -47,7 +52,7 @@ def run():
                 break
 
         if not found:
-            print("無找到兩個連續元素符合條件")
+            print("無找到兩個連續場")
 
         wait_for_user_to_end()
 
