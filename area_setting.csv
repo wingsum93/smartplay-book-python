@@ -1,6 +1,5 @@
-venueName,venueId,district
-上水體育館,340,NTN
-九龍城體育館,228,KC
-土瓜灣體育館,233,KC
-九龍公園體育館,307,YTM
-
+venueName,venueId,district,fatId
+紅磡市政大廈體育館,224,KC,504
+佛光街體育館,223,KC,306
+大角咀體育館,70000521,YTM,504
+車公廟體育館,70001933,ST,22

@@ -8,6 +8,7 @@ from smartplay.url_composer import VenuePageUrlBuilder
 from smartplay.config import Config
 from smartplay.selector import Selector
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 
@@ -58,7 +59,7 @@ def main():
         venue_settings = load_venue_settings(AREA_CSV_PATH)
         now = datetime.now()
         target_date = date.today() + timedelta(days=5 if now.hour < 7 else 6)
-
+        print(f"number of venues: {len(venue_settings)}")
 
 
         for venue in venue_settings:
@@ -66,13 +67,14 @@ def main():
                 venue_id=venue['venueId'],
                 venue_name=venue['venueName'],
                 district=venue['district'],
+                fat_id=int(venue['fatId']),
                 play_date=target_date
             )
             arena_url = builder.build_url()
             print(f"➡️ Visiting arena: {arena_url}")
             page.goto(arena_url)
             page.wait_for_load_state('domcontentloaded')
-            page.click(Selector.the_day_selection)  
+            #page.click(Selector.the_day_selection)  
             page.wait_for_selector(Selector.sport_section, timeout=10000)  # 等待主元素出現
             page.screenshot(path=f"temp/arena_{venue['venueName']}.png", full_page=True)
             
@@ -108,10 +110,12 @@ def main():
                         print("無找到『繼續』按鈕")
                     found = True
                     break
+                
+            # 3. 如果無找到兩個連續場
             if not found:
                 print(f"{venue['venueName']}, 無找到兩個連續場")
-            
-
+            # 4. 等待 0.2～0.5 秒
+            time.sleep(random.uniform(0.2, 0.5))  # human-like delay before retry
         wait_for_user_to_end()
         print("✅ Browser closed. Exiting program.")
         browser.close()
