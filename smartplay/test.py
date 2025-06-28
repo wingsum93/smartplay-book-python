@@ -1,15 +1,19 @@
 from playwright.sync_api import sync_playwright
 from smartplay.selector import Selector
+from smartplay.url_composer import VenuePageUrlBuilder
 import time
+from datetime import date, timedelta, datetime
 
 def run():
-    playDate= "2025-06-30"  # 👈 你想要的日期
+    now = datetime.now()
+    target_date = date.today() + timedelta(days=5 if now.hour < 7 else 6)
     venueName= "紅磡市政大廈體育館"
     venueId= "224"  # 👈 你想要的場地 ID
     district= "KC"  # 👈 你想要的地區代碼
     fatId= 504
-    TEMP_URL = f'https://www.smartplay.lcsd.gov.hk/facilities/select/court?venueId={venueId}&fatId={fatId}&venueName={venueName}&sessionIndex=0&dateIndex=0&playDate={playDate}&district={district}&typeCode=BADC&sportCode=BAGM&frmFilterType=&isFree=false'
-    
+    builder = VenuePageUrlBuilder(venue_id=venueId, venue_name=venueName, district=district, fat_id=fatId, play_date=target_date)
+    builder.setSessionIndex(1)
+    builder.setDateIndex(None)
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False, slow_mo=150)  # 開啟實體視窗方便 debug
         context = browser.new_context(
@@ -18,8 +22,10 @@ def run():
             java_script_enabled=True
         )
         page = context.new_page()
+        
+        TEMP_URL = builder.build_url()
         print(f"🔗 Opening URL: {TEMP_URL}")
-        page.goto(TEMP_URL,wait_until="domcontentloaded")  # 👈 你嘅目標網址
+        page.goto( TEMP_URL ,wait_until="domcontentloaded")  # 👈 你嘅目標網址
         page.wait_for_timeout(9000)
         # 1. 選取全部 16 個主元素
         all_items = page.query_selector_all(Selector.sport_section)  # 換成你真實嘅 selector

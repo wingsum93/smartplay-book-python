@@ -49,6 +49,15 @@ class VenuePageUrlBuilder:
         self.frm_filter_type = ""
         self.is_free = "false"
 
+    def setSessionIndex(self, session_index: int):
+        if session_index in range(0,2):
+            self.sessionIndex = session_index
+        else:
+            raise ValueError("Session index must be 0 or 2.")
+        
+    def setDateIndex(self, date_index: int):
+        self.date_index = date_index
+        
     def build_url(self) -> str:
         query_params = {
             "venueId": self.venue_id,
