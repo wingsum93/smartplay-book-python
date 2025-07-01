@@ -95,7 +95,7 @@ def main():
                 arena_url,
                 wait_until="networkidle", # networkidle / domcontentloaded
                 screenshot_prefix=venue['venueName'],
-                postLogic=lambda p: post_logic_select_consecutive_slots(p, venue['venueName'],7)
+                postLogic=lambda p: post_logic_select_consecutive_slots(p, venue['venueName'],Config.START_TIME_IN_HOUR)
             )
             if success:
                 print(f"🎉 Booking success at {venue['venueName']}, stopping loop.")
