@@ -5,6 +5,7 @@ from urllib.parse import urlencode, quote
 from playwright.sync_api import sync_playwright
 from smartplay.page_handler import PageStateHandler
 from smartplay.url_composer import VenuePageUrlBuilder
+from smartplay.wrappedpage import WrappedPage
 from smartplay.config import Config
 from smartplay.selector import Selector
 from dotenv import load_dotenv
@@ -15,6 +16,21 @@ load_dotenv()
 AREA_CSV_PATH = "area_setting.csv"
 URL = 'https://www.smartplay.lcsd.gov.hk/home?lang=tc'
 
+def wait_until_7am():
+    now = datetime.now()
+    target = now.replace(hour=7, minute=0, second=0, microsecond=0)
+
+    # 如果已經過咗 7am，就唔等
+    if now >= target:
+        return
+
+    # 只係 6:45am ~ 7:00am 才等
+    if now.hour == 6 and now.minute >= 45:
+        print(f"⏳ Waiting until 7:00:00 AM... current time: {now.strftime('%H:%M:%S')}")
+        while datetime.now() < target:
+            time.sleep(0.2)  # sleep 200ms
+            print(f"⏳ Current time: {datetime.now().strftime('%H:%M:%S')}", end='\r')
+        print("✅ Reached 7:00:00 AM")
 
 def load_venue_settings(csv_path):
     with open(csv_path, newline='', encoding='utf-8') as f:
@@ -22,6 +38,8 @@ def load_venue_settings(csv_path):
         return [row for row in reader if row.get('venueId') and row.get('venueName') and row.get('district')]
 
 def main():
+    wait_until_7am()  # <--- 👈 加呢句
+
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False, slow_mo=200)
         context = browser.new_context(
@@ -32,6 +50,7 @@ def main():
 
         page = context.new_page()
         handler = PageStateHandler(page)
+        wrappedPage = WrappedPage(page, handler)
 
         # 登入與排隊流程
         while True:
@@ -71,55 +90,65 @@ def main():
                 play_date=target_date
             )
             arena_url = builder.build_url()
-            print(f"➡️ Visiting arena: {arena_url}")
-            page.goto(arena_url)
-            page.wait_for_load_state('domcontentloaded')
-            #page.click(Selector.the_day_selection)  
-            page.wait_for_selector(Selector.sport_section, timeout=10000)  # 等待主元素出現
-            page.screenshot(path=f"temp/arena_{venue['venueName']}.png", full_page=True)
             
-            # 1. 選取全部 16 個主元素
-            all_items = page.query_selector_all(Selector.sport_section)  # 換成你真實嘅 selector
-            if len(all_items) < 7:
-                print("元素數量不足, abnormal page structure.")
-                return
-
-            # 2. 從尾向前 loop（但跳過頭 5 個）
-            found = False
-            for i in range(len(all_items)-1, 4, -1):  # index 5 開始，逆向
-                current = all_items[i]
-                prev = all_items[i-1]
-
-                has_span_curr = current.query_selector(Selector.have_area) is not None
-                has_span_prev = prev.query_selector(Selector.have_area) is not None
-
-                if has_span_curr and has_span_prev:
-                    # click 兩個元素
-                    prev.click()
-                    current.click()
-                    print(f"Clicked on index: {i-1} and {i}")
-
-                    # click 下一頁
-                    next_button = page.get_by_role("button", name="繼續")  # 換成實際按鈕 selector
-                    if next_button:
-                        try:
-                            next_button.click()
-                        except Exception as e:
-                            print(f"Timeout while clicking '繼續' button: {e}")
-                    else:
-                        print("無找到『繼續』按鈕")
-                    found = True
-                    break
-                
-            # 3. 如果無找到兩個連續場
-            if not found:
-                print(f"{venue['venueName']}, 無找到兩個連續場")
+            success = wrappedPage.goto(
+                arena_url,
+                wait_until="networkidle", # networkidle / domcontentloaded
+                screenshot_prefix=venue['venueName'],
+                postLogic=lambda p: post_logic_select_consecutive_slots(p, venue['venueName'],7)
+            )
+            if success:
+                print(f"🎉 Booking success at {venue['venueName']}, stopping loop.")
+                break
             # 4. 等待 0.2～0.5 秒
             time.sleep(random.uniform(0.2, 0.5))  # human-like delay before retry
         wait_for_user_to_end()
         print("✅ Browser closed. Exiting program.")
         browser.close()
+    
+def post_logic_select_consecutive_slots(page, venue_name="N/A", prefer_start_hour=21)-> bool:
+    print(f"🔍 Checking preferred timeslot ({prefer_start_hour}:00) for venue: {venue_name}")
 
+    all_items = page.query_selector_all(Selector.sport_section)
+
+    if len(all_items) != 16:
+        print(f"❌ Expected 16 timeslots (07:00–22:00), but got {len(all_items)}. Skipping...")
+        return False
+
+    start_index = prefer_start_hour - 7  # index from 0~15 for 07:00–22:00
+
+    if not (0 <= start_index <= 14):  # max allowed = 14 (for last pair 21:00 + 22:00)
+        print(f"❌ Invalid prefer_start_hour: {prefer_start_hour}. Must be between 7 and 21.")
+        return False
+
+    try:
+        current = all_items[start_index]
+        next_slot = all_items[start_index + 1]
+    except IndexError:
+        print("❌ Not enough slots for a 2-hour window. Skipping...")
+        return False
+
+    has_curr = current.query_selector(Selector.have_area) is not None
+    has_next = next_slot.query_selector(Selector.have_area) is not None
+
+    if has_curr and has_next:
+        current.click()
+        next_slot.click()
+        print(f"✅ Clicked timeslots at {prefer_start_hour}:00 and {prefer_start_hour+1}:00")
+
+        next_button = page.get_by_role("button", name="繼續")
+        if next_button:
+            try:
+                next_button.click()
+            except Exception as e:
+                print(f"⚠️ Timeout clicking '繼續': {e}")
+        else:
+            print("❌ 『繼續』按鈕不存在")
+        return True  # 🎯 成功
+    else:
+        print(f"❌ Preferred slots at {prefer_start_hour}:00 not available (one or both unavailable)")
+        return False
+            
 def wait_for_user_to_end():
     while True:
         user_input = input("🔸 Type 'end' to exit browser: ")

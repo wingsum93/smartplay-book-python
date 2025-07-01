@@ -12,5 +12,5 @@ class Selector:
     
     # facilities-sc-content-all-item
     the_day_selection = 'div.facilities-date-list-item div.item-num-box-select.relative'
-    sport_section = 'div.facilities-sc-content-all-item'
+    sport_section = 'div.facilities-sc-content-all-item' # have 16 items
     have_area = 'div.relative.tag span'
