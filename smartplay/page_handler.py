@@ -65,7 +65,7 @@ class PageStateHandler:
             except ValueError:
                 queue_number = 0
             print(f"🔢 Current queue number: {queue_number}")
-            if self.is_loggedin_home_page():
+            if not self.is_queue_page():
                 print("✅ Queue passed, now on home page.")
                 return
 

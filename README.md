@@ -25,3 +25,4 @@ python -m smartplay.v2
 ```
 # Limitation
 still work in progress, developed in mac platform
+change page too quickly, will jump even enter queue page.

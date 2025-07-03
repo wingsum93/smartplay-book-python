@@ -53,8 +53,8 @@ def main():
         wrappedPage = WrappedPage(page, handler)
 
         # 登入與排隊流程
+        page.goto(URL)
         while True:
-            page.goto(URL)
             page.wait_for_load_state('domcontentloaded')
 
             if handler.is_unlogin_page():

@@ -14,3 +14,5 @@ class Selector:
     the_day_selection = 'div.facilities-date-list-item div.item-num-box-select.relative'
     sport_section = 'div.facilities-sc-content-all-item' # have 16 items
     have_area = 'div.relative.tag span'
+    
+    ## 網上輪候中 (text)
