@@ -5,9 +5,11 @@ from urllib.parse import urlencode, quote
 from playwright.sync_api import sync_playwright
 from smartplay.page_handler import PageStateHandler
 from smartplay.url_composer import VenuePageUrlBuilder
-from smartplay.wrappedpage import WrappedPage
+from smartplay.smartplay_page import SmartPlayPage
+from smartplay.arena import Arena
 from smartplay.config import Config
 from smartplay.selector import Selector
+from smartplay.queue_listener import OnQueuePageListener
 from dotenv import load_dotenv
 import random
 
@@ -32,11 +34,6 @@ def wait_until_7am():
             print(f"⏳ Current time: {datetime.now().strftime('%H:%M:%S')}", end='\r')
         print("✅ Reached 7:00:00 AM")
 
-def load_venue_settings(csv_path):
-    with open(csv_path, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        return [row for row in reader if row.get('venueId') and row.get('venueName') and row.get('district')]
-
 def main():
     wait_until_7am()  # <--- 👈 加呢句
 
@@ -49,59 +46,14 @@ def main():
         )
 
         page = context.new_page()
-        handler = PageStateHandler(page)
-        wrappedPage = WrappedPage(page, handler)
+        queueListener = PrintQueueListener()
+        smart_page = SmartPlayPage(page, queueListener)
 
         # 登入與排隊流程
-        page.goto(URL)
-        while True:
-            page.wait_for_load_state('domcontentloaded')
+        smart_page.goto(URL)
+        
 
-            if handler.is_unlogin_page():
-                handler.try_auto_login()
-                time.sleep(1)
-                continue
-
-            if handler.is_queue_page():
-                handler.wait_for_queue_to_pass()
-                time.sleep(1)
-                continue
-
-            if handler.is_loggedin_home_page():
-                print("🎉 Successfully reached home page.")
-                break
-
-            print("🔁 Retrying page detection...")
-            time.sleep(1)
-
-        # 載入場館資料並組成網址
-        venue_settings = load_venue_settings(AREA_CSV_PATH)
-        now = datetime.now()
-        target_date = date.today() + timedelta(days=5 if now.hour < 7 else 6)
-        print(f"number of venues: {len(venue_settings)}")
-
-
-        for venue in venue_settings:
-            builder = VenuePageUrlBuilder(
-                venue_id=venue['venueId'],
-                venue_name=venue['venueName'],
-                district=venue['district'],
-                fat_id=int(venue['fatId']),
-                play_date=target_date
-            )
-            arena_url = builder.build_url()
-            
-            success = wrappedPage.goto(
-                arena_url,
-                wait_until="networkidle", # networkidle / domcontentloaded
-                screenshot_prefix=venue['venueName'],
-                postLogic=lambda p: post_logic_select_consecutive_slots(p, venue['venueName'],Config.START_TIME_IN_HOUR)
-            )
-            if success:
-                print(f"🎉 Booking success at {venue['venueName']}, stopping loop.")
-                break
-            # 4. 等待 0.2～0.5 秒
-            time.sleep(random.uniform(0.2, 0.5))  # human-like delay before retry
+        
         wait_for_user_to_end()
         print("✅ Browser closed. Exiting program.")
         browser.close()
@@ -148,7 +100,9 @@ def post_logic_select_consecutive_slots(page, venue_name="N/A", prefer_start_hou
     else:
         print(f"❌ Preferred slots at {prefer_start_hour}:00 not available (one or both unavailable)")
         return False
-            
+class PrintQueueListener(OnQueuePageListener):
+    def onQueuePage(self, queue: int):
+        print(f"🔔 Listener triggered: Current queue number is {queue}")            
 def wait_for_user_to_end():
     while True:
         user_input = input("🔸 Type 'end' to exit browser: ")
