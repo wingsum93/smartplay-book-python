@@ -9,3 +9,4 @@ class Config:
    QUEUE_REMINDER_THRESHOLD = 4000  # 排隊人數小過此數量才提醒
    
    START_TIME_IN_HOUR = 21  # 預設開始時間
+   PAGE_TAB = 1  # 預設頁籤

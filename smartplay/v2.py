@@ -12,6 +12,7 @@ from smartplay.selector import Selector
 from smartplay.queue_listener import OnQueuePageListener
 from dotenv import load_dotenv
 import random
+import threading
 
 load_dotenv()
 
@@ -33,30 +34,34 @@ def wait_until_7am():
             time.sleep(0.2)  # sleep 200ms
             print(f"⏳ Current time: {datetime.now().strftime('%H:%M:%S')}", end='\r')
         print("✅ Reached 7:00:00 AM")
-
-def main():
-    wait_until_7am()  # <--- 👈 加呢句
-
+def run_one_instance():
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False, slow_mo=200)
+        browser = p.firefox.launch(headless=False)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
             bypass_csp=True,
             java_script_enabled=True
         )
-
         page = context.new_page()
-        queueListener = PrintQueueListener()
-        smart_page = SmartPlayPage(page, queueListener)
 
-        # 登入與排隊流程
-        smart_page.goto(URL)
+        smart_page = SmartPlayPage(page)
+        smart_page.goto("https://www.smartplay.lcsd.gov.hk/home?lang=tc")
         
 
+def main():
+    wait_until_7am()  # <--- 👈 加呢句
+    threads = []
+    for _ in range(Config.PAGE_TAB):
+        t = threading.Thread(target=run_one_instance)
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
         
-        wait_for_user_to_end()
-        print("✅ Browser closed. Exiting program.")
-        browser.close()
+    wait_for_user_to_end()
+    print("✅ Browser closed. Exiting program.")    
+        
     
 def post_logic_select_consecutive_slots(page, venue_name="N/A", prefer_start_hour=21)-> bool:
     print(f"🔍 Checking preferred timeslot ({prefer_start_hour}:00) for venue: {venue_name}")
